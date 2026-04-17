@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#000000" />
-    <title>Fallin in ur eyes</title>
+    <title>3D Rotate Album</title>
     <style>
         * {
             box-sizing: border-box;
@@ -351,6 +351,16 @@
             img.src = src;
             img.alt = 'Album image';
             img.draggable = false;
+            // Debug: nếu ảnh fail load, hiện tên file lên card để dễ sửa
+            img.addEventListener('error', () => {
+                el.style.background = '#3a0000';
+                el.style.border = '2px solid #ff4444';
+                const label = document.createElement('div');
+                label.textContent = 'FAIL: ' + src;
+                label.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:8px;color:#ff8080;font-size:10px;word-break:break-all;text-align:center;line-height:1.3;';
+                el.appendChild(label);
+                console.error('Image load failed:', src);
+            });
             el.appendChild(img);
             return el;
         }
@@ -688,13 +698,63 @@
             }
         }
 
-        // Tìm cardData từ một DOM element bất kỳ (đi lên cây DOM tìm element có __cardData)
-        function findCardFromElement(el) {
-            while (el && el !== document.body) {
-                if (el.__cardData) return el.__cardData;
-                el = el.parentElement;
-            }
-            return null;
+        // Tìm card trúng tại toạ độ màn hình (x, y) bằng raycasting 3D.
+        // Đáng tin cậy hơn elementFromPoint vì không phụ thuộc DOM stacking.
+        const raycaster = new THREE.Raycaster();
+        const ndcPoint = new THREE.Vector2();
+
+        function findCardAtScreenPoint(screenX, screenY) {
+            // Chuyển sang Normalized Device Coordinates
+            ndcPoint.x = (screenX / window.innerWidth) * 2 - 1;
+            ndcPoint.y = -(screenY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(ndcPoint, camera);
+
+            // Tạo plane hình chữ nhật ẩn cho mỗi card và test intersect.
+            // Dùng cách đơn giản hơn: project tâm card ra screen, kiểm tra khoảng cách.
+            let best = null;
+            let bestDepth = Infinity;
+
+            const cardHalfW = (CONFIG.cardWidth * getResponsiveScale()) / 2;
+            const cardHalfH = (CONFIG.cardHeight * getResponsiveScale()) / 2;
+
+            cards.forEach((card) => {
+                // Lấy vị trí world hiện tại của card
+                const worldPos = new THREE.Vector3();
+                card.object.getWorldPosition(worldPos);
+
+                // Vector từ camera tới card
+                const toCard = worldPos.clone().sub(camera.position);
+                const depth = toCard.length();
+
+                // Project tâm card ra NDC rồi ra pixel
+                const projected = worldPos.clone().project(camera);
+                if (projected.z > 1 || projected.z < -1) return; // sau camera hoặc quá xa
+
+                const screenCx = (projected.x + 1) * 0.5 * window.innerWidth;
+                const screenCy = (-projected.y + 1) * 0.5 * window.innerHeight;
+
+                // Tính kích thước card trên màn hình (dựa trên khoảng cách)
+                // Công thức gần đúng: halfSize / depth * (viewport_height / (2 * tan(fov/2)))
+                const fovRad = camera.fov * Math.PI / 180;
+                const pxPerUnit = window.innerHeight / (2 * Math.tan(fovRad / 2) * depth);
+                const hw = cardHalfW * pxPerUnit;
+                const hh = cardHalfH * pxPerUnit;
+
+                // Bounding box test (gần đúng - card xoay nên thực tế là parallelogram,
+                // nhưng sai số nhỏ đủ dùng cho click)
+                if (
+                    screenX >= screenCx - hw && screenX <= screenCx + hw &&
+                    screenY >= screenCy - hh && screenY <= screenCy + hh
+                ) {
+                    // Chọn card gần camera nhất (ở trên)
+                    if (depth < bestDepth) {
+                        bestDepth = depth;
+                        best = card;
+                    }
+                }
+            });
+
+            return best;
         }
 
         // Bắt pointer ở phase capture trên window để chạy TRƯỚC OrbitControls.
@@ -703,14 +763,15 @@
         let pointerDownY = 0;
         let pointerDownTime = 0;
         let pointerDownOnCard = null;
+        let pointerDownWasOnBackground = false;
 
         window.addEventListener('pointerdown', (e) => {
             pointerDownX = e.clientX;
             pointerDownY = e.clientY;
             pointerDownTime = performance.now();
-            // Tìm xem pointer bấm xuống có trúng card nào không
-            const hit = document.elementFromPoint(e.clientX, e.clientY);
-            pointerDownOnCard = findCardFromElement(hit);
+            // Tìm xem pointer bấm xuống có trúng card nào không (raycasting 3D)
+            pointerDownOnCard = findCardAtScreenPoint(e.clientX, e.clientY);
+            pointerDownWasOnBackground = !pointerDownOnCard;
         }, true);
 
         window.addEventListener('pointerup', (e) => {
@@ -719,21 +780,20 @@
             const dist = Math.sqrt(dx * dx + dy * dy);
             const dt = performance.now() - pointerDownTime;
 
-            // Click thật: pointer gần như đứng yên + thời gian ngắn
-            if (dist < 8 && dt < 500) {
-                const hit = document.elementFromPoint(e.clientX, e.clientY);
-                const card = findCardFromElement(hit);
+            const isClick = dist < 8 && dt < 500;
 
-                if (card && card === pointerDownOnCard) {
-                    // Click trúng card
-                    onCardClick(card);
-                } else if (!card && focusedCard && !focusAnimation && !introActive) {
-                    // Click ra nền khi đang focus -> trả về
+            if (isClick) {
+                // Dùng thẳng cardData đã ghi lại lúc pointerdown
+                // (không hit-test lại ở pointerup vì vòng có thể đã xoay đi)
+                if (pointerDownOnCard) {
+                    onCardClick(pointerDownOnCard);
+                } else if (pointerDownWasOnBackground && focusedCard && !focusAnimation && !introActive) {
                     unfocusCard(focusedCard);
                 }
             }
 
             pointerDownOnCard = null;
+            pointerDownWasOnBackground = false;
         }, true);
 
         // Debounce resize để tránh rebuild liên tục (iOS address bar, xoay máy...)

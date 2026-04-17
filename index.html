@@ -698,61 +698,74 @@
             }
         }
 
-        // Tìm card trúng tại toạ độ màn hình (x, y) bằng raycasting 3D.
-        // Đáng tin cậy hơn elementFromPoint vì không phụ thuộc DOM stacking.
+        // Tìm card trúng tại toạ độ màn hình (x, y) bằng ray-plane intersection thực.
+        // Chính xác với card xoay nghiêng, loại bỏ card đang quay lưng (backface).
         const raycaster = new THREE.Raycaster();
         const ndcPoint = new THREE.Vector2();
 
         function findCardAtScreenPoint(screenX, screenY) {
-            // Chuyển sang Normalized Device Coordinates
+            // Chuyển sang Normalized Device Coordinates và bắn tia từ camera
             ndcPoint.x = (screenX / window.innerWidth) * 2 - 1;
             ndcPoint.y = -(screenY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(ndcPoint, camera);
+            const ray = raycaster.ray;
 
-            // Tạo plane hình chữ nhật ẩn cho mỗi card và test intersect.
-            // Dùng cách đơn giản hơn: project tâm card ra screen, kiểm tra khoảng cách.
+            const scale = getResponsiveScale();
+            const cardHalfW = (CONFIG.cardWidth * scale) / 2;
+            const cardHalfH = (CONFIG.cardHeight * scale) / 2;
+
             let best = null;
-            let bestDepth = Infinity;
+            let bestDistance = Infinity;
 
-            const cardHalfW = (CONFIG.cardWidth * getResponsiveScale()) / 2;
-            const cardHalfH = (CONFIG.cardHeight * getResponsiveScale()) / 2;
+            // Tạm vector dùng lại, tránh cấp phát trong loop
+            const worldPos = new THREE.Vector3();
+            const worldQuat = new THREE.Quaternion();
+            const normal = new THREE.Vector3();
+            const right = new THREE.Vector3();
+            const up = new THREE.Vector3();
+            const toRayOrigin = new THREE.Vector3();
+            const hitPoint = new THREE.Vector3();
+            const local = new THREE.Vector3();
 
-            cards.forEach((card) => {
-                // Lấy vị trí world hiện tại của card
-                const worldPos = new THREE.Vector3();
+            for (const card of cards) {
                 card.object.getWorldPosition(worldPos);
+                card.object.getWorldQuaternion(worldQuat);
 
-                // Vector từ camera tới card
-                const toCard = worldPos.clone().sub(camera.position);
-                const depth = toCard.length();
+                // 3 vector cơ sở của card trong world space
+                // Card nằm trên plane XY của local frame, normal là +Z
+                normal.set(0, 0, 1).applyQuaternion(worldQuat);
+                right.set(1, 0, 0).applyQuaternion(worldQuat);
+                up.set(0, 1, 0).applyQuaternion(worldQuat);
 
-                // Project tâm card ra NDC rồi ra pixel
-                const projected = worldPos.clone().project(camera);
-                if (projected.z > 1 || projected.z < -1) return; // sau camera hoặc quá xa
+                // Dot giữa normal và hướng tia -- âm nghĩa là mặt trước hướng về ray origin (camera)
+                const denom = ray.direction.dot(normal);
 
-                const screenCx = (projected.x + 1) * 0.5 * window.innerWidth;
-                const screenCy = (-projected.y + 1) * 0.5 * window.innerHeight;
+                // Bỏ qua card song song với tia hoặc card quay lưng
+                // denom < 0: tia đi từ camera tới plane theo chiều normal dương -> mặt trước hướng về camera
+                // Đã tính kích thước ảnh với backface ẩn, chỉ click được mặt trước
+                if (denom >= -0.001) continue;
 
-                // Tính kích thước card trên màn hình (dựa trên khoảng cách)
-                // Công thức gần đúng: halfSize / depth * (viewport_height / (2 * tan(fov/2)))
-                const fovRad = camera.fov * Math.PI / 180;
-                const pxPerUnit = window.innerHeight / (2 * Math.tan(fovRad / 2) * depth);
-                const hw = cardHalfW * pxPerUnit;
-                const hh = cardHalfH * pxPerUnit;
+                // t = (worldPos - ray.origin) . normal / denom
+                toRayOrigin.copy(worldPos).sub(ray.origin);
+                const t = toRayOrigin.dot(normal) / denom;
+                if (t <= 0) continue; // giao điểm sau camera
 
-                // Bounding box test (gần đúng - card xoay nên thực tế là parallelogram,
-                // nhưng sai số nhỏ đủ dùng cho click)
-                if (
-                    screenX >= screenCx - hw && screenX <= screenCx + hw &&
-                    screenY >= screenCy - hh && screenY <= screenCy + hh
-                ) {
-                    // Chọn card gần camera nhất (ở trên)
-                    if (depth < bestDepth) {
-                        bestDepth = depth;
+                // Điểm giao trong world space
+                hitPoint.copy(ray.direction).multiplyScalar(t).add(ray.origin);
+
+                // Chuyển hit point về local (tâm card)
+                local.copy(hitPoint).sub(worldPos);
+                const u = local.dot(right);
+                const v = local.dot(up);
+
+                // Test xem có nằm trong hình chữ nhật của card không
+                if (Math.abs(u) <= cardHalfW && Math.abs(v) <= cardHalfH) {
+                    if (t < bestDistance) {
+                        bestDistance = t;
                         best = card;
                     }
                 }
-            });
+            }
 
             return best;
         }

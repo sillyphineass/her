@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Rotate Album</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at center, rgba(255, 255, 255, 0.045), transparent 22%),
+                radial-gradient(circle at center, rgba(255, 255, 255, 0.02), transparent 42%),
+                radial-gradient(circle at center, rgba(255, 255, 255, 0.015), transparent 62%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #app,
+        #stage {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+        }
+
+        #stage {
+            z-index: 1;
+        }
+
+        .card {
+            width: var(--card-w, 148px);
+            height: var(--card-h, 204px);
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            background: #0f0f0f;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.05),
+                0 12px 34px rgba(0, 0, 0, 0.56),
+                0 0 22px rgba(255, 255, 255, 0.08);
+            opacity: 0;
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+            transition: box-shadow 0.25s ease;
+        }
+
+        .card:hover {
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.18),
+                0 16px 44px rgba(0, 0, 0, 0.6),
+                0 0 40px rgba(255, 255, 255, 0.18);
+        }
+
+        .card.focused {
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.35),
+                0 24px 60px rgba(0, 0, 0, 0.7),
+                0 0 80px rgba(255, 255, 255, 0.28);
+        }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            user-select: none;
+            -webkit-user-drag: none;
+            pointer-events: none;
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 30%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 26%, transparent 72%, rgba(255, 255, 255, 0.08));
+            mix-blend-mode: screen;
+            pointer-events: none;
+        }
+
+        .card::after {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            pointer-events: none;
+        }
+
+        .renderer-root {
+            position: absolute;
+            inset: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div id="stage"></div>
+    </div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+      }
+    }
+  </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+
+        // ================================================================
+        // 1) THAY ẢNH TẠI ĐÂY - Sẵn 40 slot
+        // ================================================================
+        const IMAGES = [
+            'https://picsum.photos/id/1011/900/1200',
+            'https://picsum.photos/id/1015/900/1200',
+            'https://picsum.photos/id/1016/900/1200',
+            'https://picsum.photos/id/1018/900/1200',
+            'https://picsum.photos/id/1019/900/1200',
+            'https://picsum.photos/id/1020/900/1200',
+            'https://picsum.photos/id/1021/900/1200',
+            'https://picsum.photos/id/1022/900/1200',
+            'https://picsum.photos/id/1023/900/1200',
+            'https://picsum.photos/id/1024/900/1200',
+            'https://picsum.photos/id/1025/900/1200',
+            'https://picsum.photos/id/1035/900/1200',
+            'https://picsum.photos/id/1036/900/1200',
+            'https://picsum.photos/id/1037/900/1200',
+            'https://picsum.photos/id/1039/900/1200',
+            'https://picsum.photos/id/1040/900/1200',
+            'https://picsum.photos/id/1041/900/1200',
+            'https://picsum.photos/id/1043/900/1200',
+            'https://picsum.photos/id/1044/900/1200',
+            'https://picsum.photos/id/1045/900/1200',
+            'https://picsum.photos/id/1050/900/1200',
+            'https://picsum.photos/id/1051/900/1200',
+            'https://picsum.photos/id/1052/900/1200',
+            'https://picsum.photos/id/1053/900/1200',
+            'https://picsum.photos/id/1054/900/1200',
+            'https://picsum.photos/id/1059/900/1200',
+            'https://picsum.photos/id/1062/900/1200',
+            'https://picsum.photos/id/1067/900/1200',
+            'https://picsum.photos/id/1068/900/1200',
+            'https://picsum.photos/id/1069/900/1200',
+            'https://picsum.photos/id/1070/900/1200',
+            'https://picsum.photos/id/1071/900/1200',
+            'https://picsum.photos/id/1072/900/1200',
+            'https://picsum.photos/id/1073/900/1200',
+            'https://picsum.photos/id/1074/900/1200',
+            'https://picsum.photos/id/1080/900/1200',
+            'https://picsum.photos/id/1081/900/1200',
+            'https://picsum.photos/id/1082/900/1200',
+            'https://picsum.photos/id/1083/900/1200',
+            'https://picsum.photos/id/1084/900/1200',
+        ];
+
+        // ================================================================
+        // 2) CẤU HÌNH CHÍNH
+        // ================================================================
+        const CONFIG = {
+            rows: 4,
+            columns: 10,            // 4 x 10 = 40 slot, đúng bằng số ảnh
+            radius: 560,
+            rowGap: 235,
+            cardWidth: 150,
+            cardHeight: 208,
+            itemDuration: 1400,
+            itemStagger: 80,
+            autoRotateSpeed: 0.35,  // chậm hơn
+            minDistance: 500,
+            maxDistance: 2300,
+            // Góc nhìn cố định lúc mới vào - nhìn ngang, camera gần
+            initialRadius: 720,
+            initialPhi: Math.PI / 2,
+            initialTheta: -0.55,
+            // Zoom khi click vào ảnh
+            focusDuration: 700,
+            focusDistance: 280,  // khoảng cách từ camera tới ảnh khi focus
+            focusScale: 2.0,
+        };
+
+        const stage = document.getElementById('stage');
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 1, 5000);
+        const renderer = new CSS3DRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.domElement.className = 'renderer-root';
+        stage.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.enablePan = false;
+        controls.rotateSpeed = 0.55;
+        controls.zoomSpeed = 0.85;
+        controls.minDistance = CONFIG.minDistance;
+        controls.maxDistance = CONFIG.maxDistance;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = CONFIG.autoRotateSpeed;
+        controls.target.set(0, 0, 0);
+
+        const albumGroup = new THREE.Group();
+        scene.add(albumGroup);
+
+        let cards = [];
+        let introStart = performance.now();
+        let introActive = true;
+        let focusedCard = null;
+        let focusAnimation = null;
+        let savedAutoRotate = true;
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        function easeOutCubic(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+
+        function easeOutBack(t) {
+            const c1 = 1.70158;
+            const c3 = c1 + 1;
+            return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        }
+
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        function sphericalToVector(radius, phi, theta) {
+            const s = new THREE.Spherical(radius, phi, theta);
+            return new THREE.Vector3().setFromSpherical(s);
+        }
+
+        function getResponsiveScale() {
+            const shortSide = Math.min(window.innerWidth, window.innerHeight);
+            return clamp(shortSide / 980, 0.58, 1.08);
+        }
+
+        function makeCardElement(src, width, height) {
+            const el = document.createElement('div');
+            el.className = 'card';
+            el.style.setProperty('--card-w', `${width}px`);
+            el.style.setProperty('--card-h', `${height}px`);
+
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = 'Album image';
+            img.draggable = false;
+            el.appendChild(img);
+            return el;
+        }
+
+        function clearAlbum() {
+            cards.forEach((item) => albumGroup.remove(item.object));
+            cards = [];
+        }
+
+        function buildAlbum() {
+            clearAlbum();
+
+            const scale = getResponsiveScale();
+            const cardWidth = CONFIG.cardWidth * scale;
+            const cardHeight = CONFIG.cardHeight * scale;
+            const radius = CONFIG.radius * scale;
+            const rowGap = CONFIG.rowGap * scale;
+            const angleStep = (Math.PI * 2) / CONFIG.columns;
+            const rowCenter = (CONFIG.rows - 1) / 2;
+
+            // Tạo danh sách tất cả vị trí, sort theo thứ tự xuất hiện:
+            // ảnh gần góc nhìn ban đầu nhất hiện trước, lan dần ra
+            const slots = [];
+            for (let row = 0; row < CONFIG.rows; row++) {
+                const y = (row - rowCenter) * rowGap;
+                const angleOffset = row % 2 === 0 ? 0 : angleStep / 2;
+
+                for (let column = 0; column < CONFIG.columns; column++) {
+                    const angle = column * angleStep + angleOffset;
+                    const x = Math.cos(angle) * radius;
+                    const z = Math.sin(angle) * radius;
+
+                    const viewTheta = -CONFIG.initialTheta;
+                    let delta = Math.abs(angle - viewTheta);
+                    delta = Math.min(delta, Math.PI * 2 - delta);
+                    const sortKey = delta * 100 + Math.abs(row - rowCenter) * 2;
+
+                    slots.push({ row, column, x, y, z, angle, sortKey });
+                }
+            }
+
+            slots.sort((a, b) => a.sortKey - b.sortKey);
+
+            slots.forEach((slot, orderIndex) => {
+                if (orderIndex >= IMAGES.length) return;
+
+                const src = IMAGES[orderIndex];
+                const element = makeCardElement(src, cardWidth, cardHeight);
+                const object = new CSS3DObject(element);
+
+                const targetPosition = new THREE.Vector3(slot.x, slot.y, slot.z);
+                const targetLook = new THREE.Object3D();
+                targetLook.position.copy(targetPosition);
+                targetLook.lookAt(new THREE.Vector3(0, slot.y, 0));
+                const targetQuaternion = targetLook.quaternion.clone();
+
+                // Vị trí xuất phát: bay từ xa về, hơi lệch ngẫu nhiên
+                const startPosition = targetPosition.clone().multiplyScalar(1.9);
+                startPosition.y += (Math.random() - 0.5) * 80;
+
+                // Xoay xuất phát: lệch ngẫu nhiên, xoay dần về đúng hướng
+                const startRotator = new THREE.Object3D();
+                startRotator.quaternion.copy(targetQuaternion);
+                startRotator.rotateY(THREE.MathUtils.degToRad((Math.random() - 0.5) * 120));
+                startRotator.rotateX(THREE.MathUtils.degToRad((Math.random() - 0.5) * 40));
+                const startQuaternion = startRotator.quaternion.clone();
+
+                object.position.copy(startPosition);
+                object.quaternion.copy(startQuaternion);
+                object.scale.setScalar(0.3);
+                element.style.opacity = '0';
+
+                const cardData = {
+                    object,
+                    element,
+                    introOrder: orderIndex,
+                    startPosition,
+                    targetPosition,
+                    startQuaternion,
+                    targetQuaternion,
+                    isFocused: false,
+                };
+
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    onCardClick(cardData);
+                });
+
+                albumGroup.add(object);
+                cards.push(cardData);
+            });
+        }
+
+        function updateCardsIntro(progressMs) {
+            let allDone = true;
+            cards.forEach((card) => {
+                const startAt = card.introOrder * CONFIG.itemStagger;
+                const local = clamp((progressMs - startAt) / CONFIG.itemDuration, 0, 1);
+                if (local < 1) allDone = false;
+
+                const easedPos = easeOutCubic(local);
+                const easedScale = easeOutBack(local);
+
+                card.object.position.lerpVectors(card.startPosition, card.targetPosition, easedPos);
+                card.object.quaternion.copy(card.startQuaternion).slerp(card.targetQuaternion, easedPos);
+                card.object.scale.setScalar(lerp(0.3, 1, easedScale));
+                card.element.style.opacity = String(easedPos);
+            });
+            return allDone;
+        }
+
+        // ================================================================
+        // 3) CLICK ẢNH -> NHẢY LÊN TRƯỚC MẶT
+        // ================================================================
+        function computeFocusTransform() {
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            const focusPos = camera.position.clone().add(forward.multiplyScalar(CONFIG.focusDistance));
+
+            const lookHelper = new THREE.Object3D();
+            lookHelper.position.copy(focusPos);
+            lookHelper.lookAt(camera.position);
+            const focusQuat = lookHelper.quaternion.clone();
+
+            return { position: focusPos, quaternion: focusQuat, scale: CONFIG.focusScale };
+        }
+
+        function startFocusAnimation(card, toState, onDone) {
+            focusAnimation = {
+                card,
+                startTime: performance.now(),
+                from: {
+                    position: card.object.position.clone(),
+                    quaternion: card.object.quaternion.clone(),
+                    scale: card.object.scale.x,
+                },
+                to: toState,
+                onDone,
+            };
+        }
+
+        function onCardClick(card) {
+            if (introActive) return;
+            if (focusAnimation) return;
+
+            if (focusedCard === card) {
+                unfocusCard(card);
+            } else if (focusedCard) {
+                const previous = focusedCard;
+                unfocusCard(previous, () => focusCard(card));
+            } else {
+                focusCard(card);
+            }
+        }
+
+        function focusCard(card) {
+            savedAutoRotate = controls.autoRotate;
+            controls.autoRotate = false;
+            focusedCard = card;
+            card.isFocused = true;
+            card.element.classList.add('focused');
+
+            // Đưa card ra scene gốc để không bị xoay cùng albumGroup
+            const worldPos = new THREE.Vector3();
+            const worldQuat = new THREE.Quaternion();
+            card.object.getWorldPosition(worldPos);
+            card.object.getWorldQuaternion(worldQuat);
+            albumGroup.remove(card.object);
+            scene.add(card.object);
+            card.object.position.copy(worldPos);
+            card.object.quaternion.copy(worldQuat);
+
+            const target = computeFocusTransform();
+            startFocusAnimation(card, target);
+        }
+
+        function unfocusCard(card, onDone) {
+            card.element.classList.remove('focused');
+
+            // Tính vị trí/xoay đích dựa trên trạng thái hiện tại của albumGroup
+            const targetWorldPos = card.targetPosition.clone().applyMatrix4(albumGroup.matrixWorld);
+            const groupQuat = new THREE.Quaternion();
+            albumGroup.getWorldQuaternion(groupQuat);
+            const targetWorldQuat = groupQuat.clone().multiply(card.targetQuaternion);
+
+            startFocusAnimation(card, {
+                position: targetWorldPos,
+                quaternion: targetWorldQuat,
+                scale: 1,
+            }, () => {
+                scene.remove(card.object);
+                card.object.position.copy(card.targetPosition);
+                card.object.quaternion.copy(card.targetQuaternion);
+                card.object.scale.setScalar(1);
+                albumGroup.add(card.object);
+                card.isFocused = false;
+                if (focusedCard === card) focusedCard = null;
+                controls.autoRotate = savedAutoRotate;
+                if (onDone) onDone();
+            });
+        }
+
+        function updateFocusAnimation(now) {
+            if (!focusAnimation) return;
+            const a = focusAnimation;
+            const t = clamp((now - a.startTime) / CONFIG.focusDuration, 0, 1);
+            const e = easeInOutCubic(t);
+
+            a.card.object.position.lerpVectors(a.from.position, a.to.position, e);
+            a.card.object.quaternion.copy(a.from.quaternion).slerp(a.to.quaternion, e);
+            a.card.object.scale.setScalar(lerp(a.from.scale, a.to.scale, e));
+
+            if (t >= 1) {
+                const done = a.onDone;
+                focusAnimation = null;
+                if (done) done();
+            }
+        }
+
+        // Nếu user xoay/zoom khi đang focus, cập nhật card bám theo camera
+        function updateFocusedCardTracking() {
+            if (!focusedCard || focusAnimation) return;
+            const t = computeFocusTransform();
+            focusedCard.object.position.copy(t.position);
+            focusedCard.object.quaternion.copy(t.quaternion);
+        }
+
+        function placeCameraAtInitialView() {
+            const position = sphericalToVector(
+                CONFIG.initialRadius,
+                CONFIG.initialPhi,
+                CONFIG.initialTheta
+            );
+            camera.position.copy(position);
+            camera.lookAt(controls.target);
+            controls.update();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const now = performance.now();
+
+            if (introActive) {
+                const elapsed = now - introStart;
+                const done = updateCardsIntro(elapsed);
+                if (done) {
+                    introActive = false;
+                    cards.forEach((card) => {
+                        card.object.position.copy(card.targetPosition);
+                        card.object.quaternion.copy(card.targetQuaternion);
+                        card.object.scale.setScalar(1);
+                        card.element.style.opacity = '1';
+                    });
+                }
+            }
+
+            updateFocusAnimation(now);
+            controls.update();
+            updateFocusedCardTracking();
+            renderer.render(scene, camera);
+        }
+
+        function resize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // Chỉ rebuild khi đang intro để không làm loạn trạng thái focus
+            if (introActive) {
+                buildAlbum();
+                const elapsed = performance.now() - introStart;
+                updateCardsIntro(elapsed);
+            }
+        }
+
+        // Click ra nền → unfocus
+        stage.addEventListener('click', (e) => {
+            if (e.target === stage || e.target === renderer.domElement) {
+                if (focusedCard && !focusAnimation && !introActive) {
+                    unfocusCard(focusedCard);
+                }
+            }
+        });
+
+        window.addEventListener('resize', resize);
+
+        buildAlbum();
+        placeCameraAtInitialView();
+        animate();
+    </script>
+</body>
+
+</html>

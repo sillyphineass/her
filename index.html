@@ -3,7 +3,10 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#000000" />
     <title>3D Rotate Album</title>
     <style>
         * {
@@ -19,6 +22,11 @@
             background: #000;
             color: #fff;
             font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            /* Chặn browser zoom / highlight / callout trên mobile */
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior: none;
         }
 
         body::before {
@@ -85,6 +93,11 @@
             user-select: none;
             -webkit-user-drag: none;
             pointer-events: none;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            transform: translateZ(0);
         }
 
         .card::before {
@@ -137,77 +150,138 @@
         // 1) THAY ẢNH TẠI ĐÂY - Sẵn 40 slot
         // ================================================================
         const IMAGES = [
-            'https://picsum.photos/id/1011/900/1200',
-            'https://picsum.photos/id/1015/900/1200',
-            'https://picsum.photos/id/1016/900/1200',
-            'https://picsum.photos/id/1018/900/1200',
-            'https://picsum.photos/id/1019/900/1200',
-            'https://picsum.photos/id/1020/900/1200',
-            'https://picsum.photos/id/1021/900/1200',
-            'https://picsum.photos/id/1022/900/1200',
-            'https://picsum.photos/id/1023/900/1200',
-            'https://picsum.photos/id/1024/900/1200',
-            'https://picsum.photos/id/1025/900/1200',
-            'https://picsum.photos/id/1035/900/1200',
-            'https://picsum.photos/id/1036/900/1200',
-            'https://picsum.photos/id/1037/900/1200',
-            'https://picsum.photos/id/1039/900/1200',
-            'https://picsum.photos/id/1040/900/1200',
-            'https://picsum.photos/id/1041/900/1200',
-            'https://picsum.photos/id/1043/900/1200',
-            'https://picsum.photos/id/1044/900/1200',
-            'https://picsum.photos/id/1045/900/1200',
-            'https://picsum.photos/id/1050/900/1200',
-            'https://picsum.photos/id/1051/900/1200',
-            'https://picsum.photos/id/1052/900/1200',
-            'https://picsum.photos/id/1053/900/1200',
-            'https://picsum.photos/id/1054/900/1200',
-            'https://picsum.photos/id/1059/900/1200',
-            'https://picsum.photos/id/1062/900/1200',
-            'https://picsum.photos/id/1067/900/1200',
-            'https://picsum.photos/id/1068/900/1200',
-            'https://picsum.photos/id/1069/900/1200',
-            'https://picsum.photos/id/1070/900/1200',
-            'https://picsum.photos/id/1071/900/1200',
-            'https://picsum.photos/id/1072/900/1200',
-            'https://picsum.photos/id/1073/900/1200',
-            'https://picsum.photos/id/1074/900/1200',
-            'https://picsum.photos/id/1080/900/1200',
-            'https://picsum.photos/id/1081/900/1200',
-            'https://picsum.photos/id/1082/900/1200',
-            'https://picsum.photos/id/1083/900/1200',
-            'https://picsum.photos/id/1084/900/1200',
+            'cc04026a2c05ad5bf414.jpg',
+            'cf3f8750a93f2861712e.jpg',
+            '27ecc885e6ea67b43efb.jpg',
+            '22d4dfa1f1ce709029df.jpg',
+            '988d1afa3495b5cbec84.jpg',
+            '7400c0fe179796c9cf86.jpg',
+            'd2fc199737f8b6a6efe9.jpg',
+            '6178497c6713e64dbf02.jpg',
+            'df55ef2ec141401f1950.jpg',
+            '70ea929ebcf13daf64e0.jpg',
+            'c2e71c8f32e0b3beeaf1.jpg',
+            'eeadcfc1e1ae60f039bf.jpg',
+            '016f5a00746ff531ac7e.jpg',
+            '0f6b0a6a2405a55bfc14.jpg',
+            '866ce603c86c4932107d.jpg',
+            '6ad7a8297f40fe1ea751.jpg',
+            'fb54c531eb5e6a00334f.jpg',
+            '3f03737d5d12dc4c8503.jpg',
+            '7ff5b99897f716a94fe6.jpg',
+            '12b6fdb6d3d952870bc8.jpg',
+            'eba43fa011cf9091c9de.jpg',
+            'd141d835f65a77042e4b.jpg',
+            'c157ae31805e0100584f.jpg',
+            '5d03b807-8c3b-46cd-8f38-e25f16d829a2.jpeg',
+            '20bf8d0f5a66db388277.jpg',
+            'f3bf2ebb00d4818ad8c5.jpg',
+            'e2cbe4c2-f036-4580-a87f-af56a528a85f.jpeg',
+            '5465b4629a0d1b53421c.jpg',
+            '209791f2bf9d3ec3678c.jpg',
+            'd6c7e1b0cfdf4e8117ce.jpg',
+            'e2e60be1258ea4d0fd9f.jpg',
+            '09bc45da6bb5eaebb3a4.jpg',
+            'e4d9d2a905c0849eddd1.jpg',
+            '9e671b1d3572b42ced63.jpg',
+            '7c817886a8ef29b170fe.jpg',
+            'bce4258d0be28abcd3f3.jpg',
+            'a7ccc8bde6d2678c3ec3.jpg',
+            '765c89f2579bd6c58f8a.jpg',
+            'b82e5601886809365079.jpg',
         ];
 
         // ================================================================
-        // 2) CẤU HÌNH CHÍNH
+        // 2) CẤU HÌNH CHÍNH - tự thích ứng với kích thước màn hình
         // ================================================================
-        const CONFIG = {
-            rows: 4,
-            columns: 10,            // 4 x 10 = 40 slot, đúng bằng số ảnh
-            radius: 560,
-            rowGap: 235,
-            cardWidth: 150,
-            cardHeight: 208,
-            itemDuration: 1400,
-            itemStagger: 80,
-            autoRotateSpeed: 0.35,  // chậm hơn
-            minDistance: 500,
-            maxDistance: 2300,
-            // Góc nhìn cố định lúc mới vào - nhìn ngang, camera gần
-            initialRadius: 720,
-            initialPhi: Math.PI / 2,
-            initialTheta: -0.55,
-            // Zoom khi click vào ảnh
-            focusDuration: 700,
-            focusDistance: 280,  // khoảng cách từ camera tới ảnh khi focus
-            focusScale: 2.0,
-        };
+        function isMobile() {
+            return window.innerWidth < 768;
+        }
+        function isTablet() {
+            return window.innerWidth >= 768 && window.innerWidth < 1100;
+        }
+
+        function buildConfig() {
+            // Giữ các giá trị chung giữa desktop / tablet / mobile
+            const common = {
+                // Độ phân giải thật sự của card DOM (render ở kích thước lớn rồi
+                // scale xuống để khi zoom lên ảnh vẫn nét)
+                cardRenderMultiplier: 3,
+                itemDuration: 2000,
+                itemStagger: 115,
+                autoRotateSpeed: 0.35,
+                initialPhi: Math.PI / 2,
+                initialTheta: -0.55,
+                focusDuration: 700,
+            };
+
+            if (isMobile()) {
+                // Điện thoại (portrait): vòng tròn nhỏ hơn, ít cột hơn để ảnh không bị nhỏ,
+                // camera gần hơn, focus mode phóng to rõ hơn vì màn hình nhỏ
+                return {
+                    ...common,
+                    rows: 3,
+                    columns: 9,
+                    radius: 320,
+                    rowGap: 165,
+                    cardWidth: 108,
+                    cardHeight: 150,
+                    minDistance: 260,
+                    maxDistance: 1400,
+                    initialRadius: 440,
+                    focusDistance: 260,
+                    focusScale: 1.8,
+                };
+            }
+
+            if (isTablet()) {
+                return {
+                    ...common,
+                    rows: 3,
+                    columns: 11,
+                    radius: 440,
+                    rowGap: 200,
+                    cardWidth: 132,
+                    cardHeight: 184,
+                    minDistance: 380,
+                    maxDistance: 1900,
+                    initialRadius: 580,
+                    focusDistance: 380,
+                    focusScale: 1.5,
+                };
+            }
+
+            // Desktop
+            return {
+                ...common,
+                rows: 3,
+                columns: 13,
+                radius: 560,
+                rowGap: 235,
+                cardWidth: 150,
+                cardHeight: 208,
+                minDistance: 500,
+                maxDistance: 2300,
+                initialRadius: 720,
+                focusDistance: 460,
+                focusScale: 1.35,
+            };
+        }
+
+        let CONFIG = buildConfig();
 
         const stage = document.getElementById('stage');
 
+        // FOV lớn hơn trên portrait để thấy rộng hơn
+        function getInitialFov() {
+            const aspect = window.innerWidth / window.innerHeight;
+            if (aspect < 0.7) return 52;   // portrait điện thoại
+            if (aspect < 1.2) return 44;   // tablet / vuông
+            return 36;                     // desktop landscape
+        }
+
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 1, 5000);
+        const camera = new THREE.PerspectiveCamera(getInitialFov(), window.innerWidth / window.innerHeight, 1, 5000);
         const renderer = new CSS3DRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.domElement.className = 'renderer-root';
@@ -324,8 +398,12 @@
                 if (orderIndex >= IMAGES.length) return;
 
                 const src = IMAGES[orderIndex];
-                const element = makeCardElement(src, cardWidth, cardHeight);
+                // Render DOM của card ở kích thước lớn (×multiplier) để ảnh nét khi zoom.
+                // Bù lại bằng cách thu nhỏ CSS3DObject xuống 1/multiplier.
+                const mult = CONFIG.cardRenderMultiplier;
+                const element = makeCardElement(src, cardWidth * mult, cardHeight * mult);
                 const object = new CSS3DObject(element);
+                const baseScale = 1 / mult;
 
                 const targetPosition = new THREE.Vector3(slot.x, slot.y, slot.z);
                 const targetLook = new THREE.Object3D();
@@ -333,20 +411,31 @@
                 targetLook.lookAt(new THREE.Vector3(0, slot.y, 0));
                 const targetQuaternion = targetLook.quaternion.clone();
 
-                // Vị trí xuất phát: bay từ xa về, hơi lệch ngẫu nhiên
-                const startPosition = targetPosition.clone().multiplyScalar(1.9);
-                startPosition.y += (Math.random() - 0.5) * 80;
+                // Vị trí xuất phát: bay từ một hướng ngẫu nhiên xung quanh vị trí đích.
+                // Chọn hướng đều trên mặt cầu (spherical random direction) rồi đẩy ra xa.
+                const flyDistance = 900 + Math.random() * 500;
+                const u = Math.random();
+                const v = Math.random();
+                const theta = 2 * Math.PI * u;
+                const phi = Math.acos(2 * v - 1); // phân bố đều trên mặt cầu
+                const dir = new THREE.Vector3(
+                    Math.sin(phi) * Math.cos(theta),
+                    Math.cos(phi),
+                    Math.sin(phi) * Math.sin(theta)
+                );
+                const startPosition = targetPosition.clone().add(dir.multiplyScalar(flyDistance));
 
-                // Xoay xuất phát: lệch ngẫu nhiên, xoay dần về đúng hướng
+                // Xoay xuất phát: lệch ngẫu nhiên nhiều chiều, xoay dần về đúng hướng
                 const startRotator = new THREE.Object3D();
                 startRotator.quaternion.copy(targetQuaternion);
-                startRotator.rotateY(THREE.MathUtils.degToRad((Math.random() - 0.5) * 120));
-                startRotator.rotateX(THREE.MathUtils.degToRad((Math.random() - 0.5) * 40));
+                startRotator.rotateY(THREE.MathUtils.degToRad((Math.random() - 0.5) * 200));
+                startRotator.rotateX(THREE.MathUtils.degToRad((Math.random() - 0.5) * 140));
+                startRotator.rotateZ(THREE.MathUtils.degToRad((Math.random() - 0.5) * 120));
                 const startQuaternion = startRotator.quaternion.clone();
 
                 object.position.copy(startPosition);
                 object.quaternion.copy(startQuaternion);
-                object.scale.setScalar(0.3);
+                object.scale.setScalar(0.3 * baseScale);
                 element.style.opacity = '0';
 
                 const cardData = {
@@ -357,13 +446,12 @@
                     targetPosition,
                     startQuaternion,
                     targetQuaternion,
+                    baseScale,
                     isFocused: false,
                 };
 
-                element.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    onCardClick(cardData);
-                });
+                // Gán element với card để tìm ngược lại được từ DOM click target
+                element.__cardData = cardData;
 
                 albumGroup.add(object);
                 cards.push(cardData);
@@ -382,7 +470,7 @@
 
                 card.object.position.lerpVectors(card.startPosition, card.targetPosition, easedPos);
                 card.object.quaternion.copy(card.startQuaternion).slerp(card.targetQuaternion, easedPos);
-                card.object.scale.setScalar(lerp(0.3, 1, easedScale));
+                card.object.scale.setScalar(lerp(0.3 * card.baseScale, card.baseScale, easedScale));
                 card.element.style.opacity = String(easedPos);
             });
             return allDone;
@@ -391,7 +479,7 @@
         // ================================================================
         // 3) CLICK ẢNH -> NHẢY LÊN TRƯỚC MẶT
         // ================================================================
-        function computeFocusTransform() {
+        function computeFocusTransform(card) {
             const forward = new THREE.Vector3();
             camera.getWorldDirection(forward);
             const focusPos = camera.position.clone().add(forward.multiplyScalar(CONFIG.focusDistance));
@@ -401,7 +489,11 @@
             lookHelper.lookAt(camera.position);
             const focusQuat = lookHelper.quaternion.clone();
 
-            return { position: focusPos, quaternion: focusQuat, scale: CONFIG.focusScale };
+            return {
+                position: focusPos,
+                quaternion: focusQuat,
+                scale: CONFIG.focusScale * card.baseScale,
+            };
         }
 
         function startFocusAnimation(card, toState, onDone) {
@@ -449,7 +541,7 @@
             card.object.position.copy(worldPos);
             card.object.quaternion.copy(worldQuat);
 
-            const target = computeFocusTransform();
+            const target = computeFocusTransform(card);
             startFocusAnimation(card, target);
         }
 
@@ -465,12 +557,12 @@
             startFocusAnimation(card, {
                 position: targetWorldPos,
                 quaternion: targetWorldQuat,
-                scale: 1,
+                scale: card.baseScale,
             }, () => {
                 scene.remove(card.object);
                 card.object.position.copy(card.targetPosition);
                 card.object.quaternion.copy(card.targetQuaternion);
-                card.object.scale.setScalar(1);
+                card.object.scale.setScalar(card.baseScale);
                 albumGroup.add(card.object);
                 card.isFocused = false;
                 if (focusedCard === card) focusedCard = null;
@@ -499,7 +591,7 @@
         // Nếu user xoay/zoom khi đang focus, cập nhật card bám theo camera
         function updateFocusedCardTracking() {
             if (!focusedCard || focusAnimation) return;
-            const t = computeFocusTransform();
+            const t = computeFocusTransform(focusedCard);
             focusedCard.object.position.copy(t.position);
             focusedCard.object.quaternion.copy(t.quaternion);
         }
@@ -528,7 +620,7 @@
                     cards.forEach((card) => {
                         card.object.position.copy(card.targetPosition);
                         card.object.quaternion.copy(card.targetQuaternion);
-                        card.object.scale.setScalar(1);
+                        card.object.scale.setScalar(card.baseScale);
                         card.element.style.opacity = '1';
                     });
                 }
@@ -541,28 +633,117 @@
         }
 
         function resize() {
+            // Rebuild CONFIG nếu breakpoint đổi (vd xoay ngang/dọc điện thoại)
+            const oldRows = CONFIG.rows;
+            const oldColumns = CONFIG.columns;
+            const oldRadius = CONFIG.radius;
+            CONFIG = buildConfig();
+            const breakpointChanged =
+                oldRows !== CONFIG.rows ||
+                oldColumns !== CONFIG.columns ||
+                oldRadius !== CONFIG.radius;
+
             camera.aspect = window.innerWidth / window.innerHeight;
+            camera.fov = getInitialFov();
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
 
-            // Chỉ rebuild khi đang intro để không làm loạn trạng thái focus
-            if (introActive) {
+            // Cập nhật giới hạn zoom theo config mới
+            controls.minDistance = CONFIG.minDistance;
+            controls.maxDistance = CONFIG.maxDistance;
+            controls.autoRotateSpeed = CONFIG.autoRotateSpeed;
+
+            // Nếu đang focus, thả ảnh về trước khi rebuild
+            if (focusedCard && !focusAnimation) {
+                // Trả trực tiếp về grid, không animate
+                scene.remove(focusedCard.object);
+                focusedCard.element.classList.remove('focused');
+                focusedCard.isFocused = false;
+                albumGroup.add(focusedCard.object);
+                controls.autoRotate = savedAutoRotate;
+                focusedCard = null;
+            }
+
+            if (introActive || breakpointChanged) {
                 buildAlbum();
-                const elapsed = performance.now() - introStart;
-                updateCardsIntro(elapsed);
+                if (introActive) {
+                    const elapsed = performance.now() - introStart;
+                    updateCardsIntro(elapsed);
+                }
+                // Nếu breakpoint đổi và đã xong intro, đặt thẳng về vị trí cuối
+                if (!introActive) {
+                    cards.forEach((card) => {
+                        card.object.position.copy(card.targetPosition);
+                        card.object.quaternion.copy(card.targetQuaternion);
+                        card.object.scale.setScalar(card.baseScale);
+                        card.element.style.opacity = '1';
+                    });
+                    // Dịch camera về bán kính mới nhưng giữ hướng đang nhìn
+                    const offset = new THREE.Vector3().copy(camera.position).sub(controls.target);
+                    const sph = new THREE.Spherical().setFromVector3(offset);
+                    sph.radius = clamp(CONFIG.initialRadius, CONFIG.minDistance, CONFIG.maxDistance);
+                    camera.position.copy(new THREE.Vector3().setFromSpherical(sph));
+                    controls.update();
+                }
             }
         }
 
-        // Click ra nền → unfocus
-        stage.addEventListener('click', (e) => {
-            if (e.target === stage || e.target === renderer.domElement) {
-                if (focusedCard && !focusAnimation && !introActive) {
+        // Tìm cardData từ một DOM element bất kỳ (đi lên cây DOM tìm element có __cardData)
+        function findCardFromElement(el) {
+            while (el && el !== document.body) {
+                if (el.__cardData) return el.__cardData;
+                el = el.parentElement;
+            }
+            return null;
+        }
+
+        // Bắt pointer ở phase capture trên window để chạy TRƯỚC OrbitControls.
+        // Phân biệt click vs drag bằng khoảng cách giữa pointerdown và pointerup.
+        let pointerDownX = 0;
+        let pointerDownY = 0;
+        let pointerDownTime = 0;
+        let pointerDownOnCard = null;
+
+        window.addEventListener('pointerdown', (e) => {
+            pointerDownX = e.clientX;
+            pointerDownY = e.clientY;
+            pointerDownTime = performance.now();
+            // Tìm xem pointer bấm xuống có trúng card nào không
+            const hit = document.elementFromPoint(e.clientX, e.clientY);
+            pointerDownOnCard = findCardFromElement(hit);
+        }, true);
+
+        window.addEventListener('pointerup', (e) => {
+            const dx = e.clientX - pointerDownX;
+            const dy = e.clientY - pointerDownY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const dt = performance.now() - pointerDownTime;
+
+            // Click thật: pointer gần như đứng yên + thời gian ngắn
+            if (dist < 8 && dt < 500) {
+                const hit = document.elementFromPoint(e.clientX, e.clientY);
+                const card = findCardFromElement(hit);
+
+                if (card && card === pointerDownOnCard) {
+                    // Click trúng card
+                    onCardClick(card);
+                } else if (!card && focusedCard && !focusAnimation && !introActive) {
+                    // Click ra nền khi đang focus -> trả về
                     unfocusCard(focusedCard);
                 }
             }
-        });
 
-        window.addEventListener('resize', resize);
+            pointerDownOnCard = null;
+        }, true);
+
+        // Debounce resize để tránh rebuild liên tục (iOS address bar, xoay máy...)
+        let resizeTimer = null;
+        function handleResize() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(resize, 120);
+        }
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', handleResize);
 
         buildAlbum();
         placeCameraAtInitialView();
